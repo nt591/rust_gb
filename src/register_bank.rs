@@ -24,14 +24,6 @@ enum Register {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-enum RegisterTwoBytes {
-    AF,
-    BC,
-    DE,
-    HL,
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 enum Flag {
     Zero,        // z
     Subtraction, // n
@@ -72,6 +64,36 @@ impl RegisterBank {
         };
         Ok(())
     }
+
+    // special handlers for two-byte registers
+    pub fn read_bc(&self) -> u16 {
+        (self.b as u16) << 8 | (self.c as u16)
+    }
+
+    pub fn write_bc(&mut self, value: u16) {
+        // the top 8 bits are written to register B,
+        // and the lower 8 bits are written to c
+        self.b = (value >> 8) as u8;
+        self.c = value as u8; // just truncate top bits
+    }
+
+    pub fn read_de(&self) -> u16 {
+        (self.d as u16) << 8 | (self.e as u16)
+    }
+
+    pub fn write_de(&mut self, value: u16) {
+        self.d = (value >> 8) as u8;
+        self.e = value as u8;
+    }
+
+    pub fn read_hl(&self) -> u16 {
+        (self.h as u16) << 8 | (self.l as u16)
+    }
+
+    pub fn write_hl(&mut self, value: u16) {
+        self.h = (value >> 8) as u8;
+        self.l = value as u8; // just truncate top bits
+    }
 }
 
 #[cfg(test)]
@@ -110,5 +132,32 @@ mod tests {
                 .is_err(),
             "Expected an error for writing 0xFF to Register F",
         );
+    }
+
+    #[test]
+    fn test_bc_register() {
+        let mut bank = RegisterBank::default();
+        bank.write_bc(0xFFFF as u16);
+        assert_eq!(bank.read_bc(), 0xFFFF as u16);
+        assert_eq!(bank.read(Register::B), 0xFF as u8);
+        assert_eq!(bank.read(Register::C), 0xFF as u8);
+    }
+
+    #[test]
+    fn test_de_register() {
+        let mut bank = RegisterBank::default();
+        bank.write_de(0x00FF as u16);
+        assert_eq!(bank.read_de(), 0x00FF as u16);
+        assert_eq!(bank.read(Register::D), 0x00 as u8);
+        assert_eq!(bank.read(Register::E), 0xFF as u8);
+    }
+
+    #[test]
+    fn test_hl_register() {
+        let mut bank = RegisterBank::default();
+        bank.write_hl(0x11AA as u16);
+        assert_eq!(bank.read_hl(), 0x11AA as u16);
+        assert_eq!(bank.read(Register::H), 0x11 as u8);
+        assert_eq!(bank.read(Register::L), 0xAA as u8);
     }
 }
