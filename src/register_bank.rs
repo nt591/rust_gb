@@ -23,14 +23,6 @@ enum Register {
     L,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-enum Flag {
-    Zero,        // z
-    Subtraction, // n
-    HalfCarry,   // h
-    Carry,       // c
-}
-
 impl RegisterBank {
     pub fn read(&self, register: Register) -> u8 {
         match register {
@@ -57,6 +49,7 @@ impl RegisterBank {
                 if val & 0xF0 > 0 {
                     return Err("Invalid register F value");
                 }
+                // TODO: maybe just use explicit setters
                 self.f = val;
             }
             Register::H => self.h = val,
@@ -93,6 +86,62 @@ impl RegisterBank {
     pub fn write_hl(&mut self, value: u16) {
         self.h = (value >> 8) as u8;
         self.l = value as u8; // just truncate top bits
+    }
+
+    /*
+     * special rules for handling flag register
+     * zero is the uppermost bit (bit 7)
+     * subtraction the second-upper (bit 6)
+     * half-carry the third-upper (bit 5)
+     * carry the fourth-upper (bit 4)
+     * therefore we allow strict accessors/setters
+     */
+    pub fn set_zero_bit(&mut self, v: bool) {
+        if v {
+            self.f |= 1 << 7;
+        } else {
+            self.f &= !(1 << 7); // 0111_1111 sets 7th bit to 0, doesn't touch others
+        }
+    }
+
+    pub fn has_zero_bit(&self) -> bool {
+        self.f & 1 << 7 != 0
+    }
+
+    pub fn set_subtraction_bit(&mut self, v: bool) {
+        if v {
+            self.f |= 1 << 6
+        } else {
+            self.f &= !(1 << 6)
+        }
+    }
+
+    pub fn has_subtraction_bit(&self) -> bool {
+        self.f & 0b0100_0000 != 0
+    }
+
+    pub fn set_half_carry_bit(&mut self, v: bool) {
+        if v {
+            self.f |= 1 << 5
+        } else {
+            self.f &= !(1 << 5)
+        }
+    }
+
+    pub fn has_half_carry_bit(&self) -> bool {
+        self.f & 0b0010_0000 != 0
+    }
+
+    pub fn set_carry_bit(&mut self, v: bool) {
+        if v {
+            self.f |= 1 << 4
+        } else {
+            self.f &= !(1 << 4)
+        }
+    }
+
+    pub fn has_carry_bit(&self) -> bool {
+        self.f & 0b0001_0000 != 0
     }
 }
 
@@ -159,5 +208,41 @@ mod tests {
         assert_eq!(bank.read_hl(), 0x11AA as u16);
         assert_eq!(bank.read(Register::H), 0x11 as u8);
         assert_eq!(bank.read(Register::L), 0xAA as u8);
+    }
+
+    #[test]
+    fn test_zero_bit() {
+        let mut bank = RegisterBank::default();
+        bank.set_zero_bit(true);
+        assert!(bank.has_zero_bit());
+        bank.set_zero_bit(false);
+        assert!(!bank.has_zero_bit());
+    }
+
+    #[test]
+    fn test_subtraction_bit() {
+        let mut bank = RegisterBank::default();
+        bank.set_subtraction_bit(true);
+        assert!(bank.has_subtraction_bit());
+        bank.set_subtraction_bit(false);
+        assert!(!bank.has_subtraction_bit());
+    }
+
+    #[test]
+    fn test_half_carry_bit() {
+        let mut bank = RegisterBank::default();
+        bank.set_half_carry_bit(true);
+        assert!(bank.has_half_carry_bit());
+        bank.set_half_carry_bit(false);
+        assert!(!bank.has_half_carry_bit());
+    }
+
+    #[test]
+    fn test_carry_bit() {
+        let mut bank = RegisterBank::default();
+        bank.set_carry_bit(true);
+        assert!(bank.has_carry_bit());
+        bank.set_carry_bit(false);
+        assert!(!bank.has_carry_bit());
     }
 }
