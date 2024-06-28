@@ -1,5 +1,5 @@
 #[derive(Default, Copy, Clone, Debug)]
-struct RegisterBank {
+pub struct RegisterBank {
     // registers
     a: u8,
     b: u8,
@@ -12,7 +12,7 @@ struct RegisterBank {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-enum Register {
+pub enum Register {
     A,
     B,
     C,
